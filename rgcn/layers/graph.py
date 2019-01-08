@@ -13,7 +13,7 @@ class GraphConvolution(Layer):
                  kernel_initializer='glorot_uniform', activation='linear',
                  weights=None, kernel_regularizer=None, num_bases=-1,
                  bias_regularizer=None, use_bias=False, dropout=0., **kwargs):
-        self.init = initializations.get(init)
+        self.kernel_initializer = kernel_initializer
         self.activation = activations.get(activation)
         self.output_dim = output_dim  # number of features per node
         self.support = support  # filter support / number of weights
@@ -38,7 +38,7 @@ class GraphConvolution(Layer):
 
         super(GraphConvolution, self).__init__(**kwargs)
 
-    def get_output_shape_for(self, input_shapes):
+    def compute_output_shape(self, input_shapes):
         features_shape = input_shapes[0]
         output_shape = (features_shape[0], self.output_dim)
         return output_shape  # (batch_size, output_dim)
@@ -51,25 +51,23 @@ class GraphConvolution(Layer):
         self.input_dim = features_shape[1]
 
         if self.num_bases > 0:
-            self.kernel = K.concatenate([self.add_weight((self.input_dim, self.output_dim),
-                                                    initializer=self.init,
+            self.kernel = self.add_weight(shape=(self.input_dim*self.num_bases, self.output_dim),
+                                                    initializer=self.kernel_initializer,
                                                     name='{}_kernel'.format(self.name),
-                                                    regularizer=self.kernel_regularizer) for _ in range(self.num_bases)],
-                                   axis=0)
+                                                    regularizer=self.kernel_regularizer)
 
-            self.kernel_comp = self.add_weight((self.support, self.num_bases),
-                                          initializer=self.init,
+            self.kernel_comp = self.add_weight(shape=(self.support, self.num_bases),
+                                          initializer=self.kernel_initializer,
                                           name='{}_kernel_comp'.format(self.name),
                                           regularizer=self.kernel_regularizer)
         else:
-            self.kernel = K.concatenate([self.add_weight((self.input_dim, self.output_dim),
-                                                    initializer=self.init,
+            self.kernel = self.add_weight(shape=(self.input_dim*self.support, self.output_dim),
+                                                    initializer=self.kernel_initializer,
                                                     name='{}_kernel'.format(self.name),
-                                                    regularizer=self.kernel_regularizer) for _ in range(self.support)],
-                                   axis=0)
+                                                    regularizer=self.kernel_regularizer)
 
         if self.use_bias:
-            self.bias = self.add_weight((self.output_dim,),
+            self.bias = self.add_weight(shape=(self.output_dim,),
                                      initializer='zero',
                                      name='{}_bias'.format(self.name),
                                      regularizer=self.bias_regularizer)
@@ -77,6 +75,7 @@ class GraphConvolution(Layer):
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
+        self.built = True
 
     def call(self, inputs, mask=None):
         features = inputs[0]
@@ -107,14 +106,15 @@ class GraphConvolution(Layer):
             tmp = K.ones(self.num_nodes)
             tmp_do = Dropout(self.dropout)(tmp)
             output = K.transpose(K.transpose(output) * tmp_do)
-
         if self.use_bias:
             output = K.bias_add(output, self.bias, data_format='channels_last')
-        return self.activation(output)
+        if self.activation is not None:
+            output = self.activation(output)
+        return output
 
     def get_config(self):
         config = {'output_dim': self.output_dim,
-                  'init': self.init.__name__,
+                  'kernel_initializer': self.kernel_initializer,
                   'activation': self.activation.__name__,
                   'kernel_regularizer': self.kernel_regularizer.get_config() if self.kernel_regularizer else None,
                   'bias_regularizer': self.bias_regularizer.get_config() if self.bias_regularizer else None,

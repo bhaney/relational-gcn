@@ -1,4 +1,4 @@
-from keras.layers import Layer
+from keras.layers import Layer, InputLayer
 from keras.engine.topology import Node
 import keras.backend as K
 
@@ -6,9 +6,9 @@ import keras.backend as K
 def InputAdj(name=None, dtype=K.floatx(), sparse=False,
           tensor=None):
     shape = (None, None)
-    input_layer = InputLayerAdj(batch_input_shape=shape,
-                                name=name, sparse=sparse, input_dtype=dtype)
-    outputs = input_layer.inbound_nodes[0].output_tensors
+    input_layer = InputLayer(batch_input_shape=shape,
+                                name=name, sparse=sparse, dtype=dtype)
+    outputs = input_layer._inbound_nodes[0].output_tensors
     if len(outputs) == 1:
         return outputs[0]
     else:
@@ -16,16 +16,17 @@ def InputAdj(name=None, dtype=K.floatx(), sparse=False,
 
 
 class InputLayerAdj(Layer):
-    def __init__(self, input_shape=None, batch_input_shape=None,
-                 input_dtype=None, sparse=False, name=None):
-        self.input_spec = None
+    def __init__(self, input_shape=None,batch_size=None, 
+            batch_input_shape=None,
+            dtype=None, input_tensor=None, sparse=False, name=None):
+        #self.input_spec = None
         self.supports_masking = False
         self.uses_learning_phase = False
         self.trainable = False
-        self.built = True
+        self.built = True   
 
-        self.inbound_nodes = []
-        self.outbound_nodes = []
+        self._inbound_nodes = []
+        self._outbound_nodes = []
 
         self.trainable_weights = []
         self.non_trainable_weights = []
@@ -43,14 +44,14 @@ class InputLayerAdj(Layer):
             batch_input_shape = (None,) + tuple(input_shape)
         else:
             batch_input_shape = tuple(batch_input_shape)
-        if not input_dtype:
-            input_dtype = K.floatx()
+        if not dtype:
+            dtype = K.floatx()
 
         self.batch_input_shape = batch_input_shape
-        self.input_dtype = input_dtype
+        self.dtype = dtype
 
         input_tensor = K.placeholder(shape=batch_input_shape,
-                                     dtype=input_dtype,
+                                     dtype=dtype,
                                      sparse=self.sparse,
                                      name=self.name)
 
@@ -70,7 +71,6 @@ class InputLayerAdj(Layer):
 
     def get_config(self):
         config = {'batch_input_shape': self.batch_input_shape,
-                  'input_dtype': self.input_dtype,
+                  'dtype': self.dtype,
                   'sparse': self.sparse,
                   'name': self.name}
-        return config
