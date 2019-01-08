@@ -12,7 +12,8 @@ class GraphConvolution(Layer):
     def __init__(self, output_dim, support=1, featureless=False,
                  kernel_initializer='glorot_uniform', activation='linear',
                  weights=None, kernel_regularizer=None, num_bases=-1,
-                 bias_regularizer=None, use_bias=False, dropout=0., **kwargs):
+                 bias_regularizer=None, use_bias=False, dropout=0.,input_dim=None,
+                 **kwargs):
         self.kernel_initializer = kernel_initializer
         self.activation = activations.get(activation)
         self.output_dim = output_dim  # number of features per node

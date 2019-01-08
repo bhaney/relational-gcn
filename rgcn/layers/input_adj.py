@@ -74,3 +74,4 @@ class InputLayerAdj(Layer):
                   'dtype': self.dtype,
                   'sparse': self.sparse,
                   'name': self.name}
+        return config
