@@ -14,7 +14,7 @@ class GraphConvolution(Layer):
                  weights=None, kernel_regularizer=None, num_bases=-1,
                  bias_regularizer=None, use_bias=False, dropout=0.,input_dim=None,
                  **kwargs):
-        self.kernel_initializer = kernel_initializer
+        self.kernel_initializer = initializers.get(kernel_initializer)
         self.activation = activations.get(activation)
         self.output_dim = output_dim  # number of features per node
         self.support = support  # filter support / number of weights
@@ -115,7 +115,7 @@ class GraphConvolution(Layer):
 
     def get_config(self):
         config = {'output_dim': self.output_dim,
-                  'kernel_initializer': self.kernel_initializer,
+                  'kernel_initializer': self.kernel_initializer.__name__,
                   'activation': self.activation.__name__,
                   'kernel_regularizer': self.kernel_regularizer.get_config() if self.kernel_regularizer else None,
                   'bias_regularizer': self.bias_regularizer.get_config() if self.bias_regularizer else None,
